@@ -2,6 +2,7 @@ import config
 import telebot
 import re
 import smtplib
+from email.mime.text import MIMEText
 
 regex = re.compile(r'([A-Za-z0-9]+[._-])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+')
 bot = telebot.TeleBot(config.token)
@@ -36,13 +37,17 @@ def send_message(loadmail, message_text):
         server.starttls()
         server.login(email, password)
 
-        dest_email = loadmail
+        dest_email = loadmail.strip()
         subject = 'massage from telegram'
-        email_text = message_text
+        email_text =  message_text
         message = 'From: %s\nTo: %s\nSubject: %s\n\n%s' % (email, dest_email, subject, email_text)
 
-        server.set_debuglevel(1)  # Необязательно; так будут отображаться данные с сервера в консоли
-        server.sendmail(email, dest_email, message)
+        message = MIMEText(message)
+
+        #print(message)
+
+        #server.set_debuglevel(1)  # Необязательно; так будут отображаться данные с сервера в консоли
+        server.sendmail(email, dest_email, message.as_string())
         server.quit()
         return loadmail
     except:
