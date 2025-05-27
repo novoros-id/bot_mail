@@ -3,9 +3,16 @@ import telebot
 import re
 import smtplib
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.header    import Header
 
 regex = re.compile(r'([A-Za-z0-9]+[._-])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+')
 bot = telebot.TeleBot(config.token)
+
+
+def QuoHead(String):
+    s = quopri.encodestring(String.encode('UTF-8'), 1, 0)
+    return "=?utf-8?Q?" + s.decode('UTF-8') + "?="
 
 def isValid(email):
     if re.fullmatch(regex, email):
@@ -28,30 +35,66 @@ def load_mail(name_user):
     return False
 
 def send_message(loadmail, message_text):
+    #https://github.com/Carcarcarson/sendmail-python/blob/master/send.py
     try:
-        email = config.email
-        password = config.password
+        msg = MIMEMultipart('alternative')
+        # from, to, subject
+        msg["From"] = config.email
+        msg["To"] = loadmail.strip()
+        msg['Subject'] = message_text[0:10]
+        # html
+        html = """\
+            <html>
+                <head><meta charset="UTF-8"></head>
+                <body>
+                    <p>"""+ message_text +"""</p>
+                </body>
+            </html>
+            """
+        content = MIMEText(html, 'html', 'UTF-8')
+        msg.attach(content)
 
         server = smtplib.SMTP('smtp.yandex.ru', 587)
         server.ehlo()  # Кстати, зачем это?
         server.starttls()
-        server.login(email, password)
-
-        dest_email = loadmail.strip()
-        subject = 'massage from telegram'
-        email_text =  message_text
-        message = 'From: %s\nTo: %s\nSubject: %s\n\n%s' % (email, dest_email, subject, email_text)
-
-        message = MIMEText(message)
-
-        #print(message)
-
-        #server.set_debuglevel(1)  # Необязательно; так будут отображаться данные с сервера в консоли
-        server.sendmail(email, dest_email, message.as_string())
+        server.login(config.email, config.password)
+        # send mail
+        server.sendmail(config.email, loadmail.strip(), msg.as_string())
+        # quit
         server.quit()
         return loadmail
     except:
         return False
+    # attach
+    # dirname = os.path.dirname(__file__)
+    # filename = "send.py"
+    # full_filename = os.path.join(dirname, filename)
+    #
+    # attach = MIMEText(open(full_filename, "rb").read(), "base64", "UTF-8")
+    # attach['Content-Type'] = 'application/octet-stream'
+    # attach['Content-Disposition'] = 'attachment; filename=%s' % filename
+    # msg.attach(attach)
+    # try:
+    #     email = config.email
+    #     password = config.password
+    #
+    #     server = smtplib.SMTP('smtp.yandex.ru', 587)
+    #     server.ehlo()  # Кстати, зачем это?
+    #     server.starttls()
+    #     server.login(email, password)
+    #     dest_email = loadmail.strip()
+    #     subject = 'massage from telegram'
+    #     email_text = MIMEText(message_text)
+    #     message = 'From: %s\nTo: %s\nSubject: %s\n\n%s' % (email, dest_email, subject, email_text.as_string())
+    #
+    #     print(message)
+    #
+    #     server.set_debuglevel(1)  # Необязательно; так будут отображаться данные с сервера в консоли
+    #     server.sendmail(email, dest_email, message)
+    #     server.quit()
+    #     return loadmail
+    # except:
+    #     return False
 
 @bot.message_handler(commands=["start"])
 def start_handler(message):
